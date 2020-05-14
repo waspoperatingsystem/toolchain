@@ -9,7 +9,6 @@ export GMP_VER=6.2.0
 export MPFR_VER=4.0.2
 export MPC_VER=1.1.0
 export ISL_VER=0.22.1
-export NEWLIB_VER=3.3.0
 
 export BARCH="$1"
 export OUT="$2"
@@ -48,13 +47,6 @@ cd build
 	--with-sysroot="$SYSROOT" \
 	--with-pic \
 	--with-system-zlib \
-	--enable-64-bit-bfd \
-	--enable-gold \
-	--enable-ld=default \
-	--enable-lto \
-	--enable-plugins \
-	--enable-relro \
-	--enable-tls \
 	--disable-multilib \
 	--disable-nls \
 	--disable-shared \
@@ -108,80 +100,10 @@ AR=ar \
 	--with-zstd \
 	--without-headers \
 	--enable-checking=release \
-	--enable-default-pie \
-	--enable-default-ssp \
-	--enable-languages=c,c++,go,lto \
-	--enable-lto \
-	--enable-threads=posix \
-	--enable-tls \
-	--disable-libatomic \
-	--disable-libgomp \
-	--disable-libssp \
+	--enable-languages=c,c++ \
 	--disable-multilib \
 	--disable-nls \
 	--disable-shared \
-	--disable-symvers \
 	--disable-werror
 make -j$JOBS all-gcc
 make -j1 install-gcc
-mkdir -p "$SYSROOT/usr/include"
-cp ../gcc/ginclude/stddef.h "$SYSROOT/usr/include"
-cp ../gcc/ginclude/stdarg.h "$SYSROOT/usr/include"
-cp ../gcc/ginclude/float.h "$SYSROOT/usr/include"
-
-cd "$SRC"
-echo "Downloading and unpacking newlib $NEWLIB_VER"
-curl -C - -L -O http://sourceware.org/pub/newlib/newlib-$NEWLIB_VER.tar.gz
-bsdtar -xvf newlib-$NEWLIB_VER.tar.gz
-cd newlib-$NEWLIB_VER
-patch -Np1 -i "$TOPDIR"/newlib-add-support-for-waspOS.patch
-mkdir build
-cd build
-../configure \
-	--prefix=/usr \
-	--target=$TARGET \
-	--enable-lto \
-	--enable-newlib-hw-fp \
-	--enable-newlib-io-c99-formats \
-	--enable-newlib-multithread \
-	--disable-multilib \
-	--disable-shared
-make -j$JOBS all-target-newlib
-make -j$JOBS DESTDIR="$SYSROOT" install-target-newlib
-
-cd "$SRC"
-echo "Recompiling gcc"
-cd gcc-$GCC_VER
-rm -rvf build
-mkdir build
-cd build
-AR=ar \
-../configure \
-	--prefix="$TOOLS" \
-	--libdir="$TOOLS/lib" \
-	--libexecdir="$TOOLS/lib" \
-	--build=$(cc -dumpmachine) \
-	--host=$(cc -dumpmachine) \
-	--target=$TARGET \
-	--with-sysroot="$SYSROOT" \
-	--with-isl \
-	--with-newlib \
-	--with-system-zlib \
-	--with-zstd \
-	--enable-checking=release \
-	--enable-default-pie \
-	--enable-default-ssp \
-	--enable-languages=c,c++,go,lto \
-	--enable-lto \
-	--enable-threads=posix \
-	--enable-tls \
-	--disable-libatomic \
-	--disable-libgomp \
-	--disable-libssp \
-	--disable-multilib \
-	--disable-nls \
-	--disable-shared \
-	--disable-symvers \
-	--disable-werror
-make -j$JOBS
-make -j1 install
