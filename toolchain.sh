@@ -107,3 +107,6 @@ AR=ar \
 	--disable-werror
 make -j$JOBS all-gcc
 make -j1 install-gcc
+mkdir -p "$SYSROOT"/usr/include "$SYSROOT"/usr/lib
+cp ../gcc/ginclude/stdbool.h "$SYSROOT"/usr/include
+cp ../gcc/ginclude/stdarg.h "$SYSROOT"/usr/include
