@@ -1,0 +1,238 @@
+From 8be32f290b3f64f8c94068b557ed731f6d994fcb Mon Sep 17 00:00:00 2001
+From: Ishimoto Shinobu <nagakamira@gmail.com>
+Date: Tue, 12 May 2020 18:49:42 +0000
+Subject: [PATCH] add support for waspOS
+
+Signed-off-by: Ishimoto Shinobu <nagakamira@gmail.com>
+---
+ config.sub                  |  4 ++--
+ gcc/config.gcc              | 17 +++++++++++++++
+ gcc/config/t-wasp           |  2 ++
+ gcc/config/wasp.h           | 41 +++++++++++++++++++++++++++++++++++++
+ libgcc/config.host          | 14 ++++++++++++-
+ libstdc++-v3/crossconfig.m4 |  2 +-
+ 6 files changed, 76 insertions(+), 4 deletions(-)
+ create mode 100644 gcc/config/t-wasp
+ create mode 100644 gcc/config/wasp.h
+
+diff --git a/config.sub b/config.sub
+index a318a4686..96ab0f63b 100755
+--- a/config.sub
++++ b/config.sub
+@@ -134,7 +134,7 @@ case $1 in
+ 			nto-qnx* | linux-gnu* | linux-android* | linux-dietlibc \
+ 			| linux-newlib* | linux-musl* | linux-uclibc* | uclinux-uclibc* \
+ 			| uclinux-gnu* | kfreebsd*-gnu* | knetbsd*-gnu* | netbsd*-gnu* \
+-			| netbsd*-eabi* | kopensolaris*-gnu* | cloudabi*-eabi* \
++			| netbsd*-eabi* | wasp* | kopensolaris*-gnu* | cloudabi*-eabi* \
+ 			| storm-chaos* | os2-emx* | rtmk-nova*)
+ 				basic_machine=$field1
+ 				os=$maybe_os
+@@ -1347,7 +1347,7 @@ case $os in
+ 	     | nindy* | vxsim* | vxworks* | ebmon* | hms* | mvs* \
+ 	     | clix* | riscos* | uniplus* | iris* | isc* | rtu* | xenix* \
+ 	     | knetbsd* | mirbsd* | netbsd* \
+-	     | bitrig* | openbsd* | solidbsd* | libertybsd* | os108* \
++	     | bitrig* | openbsd* | wasp* | solidbsd* | libertybsd* | os108* \
+ 	     | ekkobsd* | kfreebsd* | freebsd* | riscix* | lynxos* \
+ 	     | bosx* | nextstep* | cxux* | aout* | elf* | oabi* \
+ 	     | ptx* | coff* | ecoff* | winnt* | domain* | vsta* \
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index cf1a87e2e..987f359cb 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -869,6 +869,15 @@ case ${target} in
+       ;;
+   esac
+   ;;
++*-*-wasp*)
++  tmake_file="t-wasp"
++  case ${enable_threads} in
++    yes)
++      thread_file='posix'
++      ;;
++  esac
++  default_use_cxa_atexit=yes
++  ;;
+ *-*-phoenix*)
+   gas=yes
+   gnu_ld=yes
+@@ -1044,6 +1053,9 @@ aarch64*-*-elf | aarch64*-*-fuchsia* | aarch64*-*-rtems*)
+         aarch64-*-fuchsia*)
+                 tm_file="${tm_file} fuchsia.h"
+                 ;;
++        aarch64-*-wasp*)
++                tm_file="${tm_file} wasp.h"
++                ;;
+ 	aarch64-*-rtems*)
+ 	  	tm_file="${tm_file} rtems.h aarch64/rtems.h"
+ 		;;
+@@ -2907,6 +2919,11 @@ powerpc-*-elf*)
+ 	extra_options="${extra_options} rs6000/sysv4.opt"
+ 	tmake_file="rs6000/t-fprules rs6000/t-ppcgas rs6000/t-ppccomm"
+ 	;;
++powerpc64-*-wasp*)
++	tm_file="${tm_file} dbxelf.h elfos.h gnu-user.h usegas.h freebsd-spec.h newlib-stdint.h rs6000/sysv4.h rs6000/default64.h"
++	extra_options="${extra_options} rs6000/sysv4.opt rs6000/linux64.opt"
++	tmake_file="rs6000/t-fprules rs6000/t-ppcgas rs6000/t-ppccomm"
++	;;
+ powerpc-*-eabialtivec*)
+ 	tm_file="${tm_file} dbxelf.h elfos.h gnu-user.h freebsd-spec.h newlib-stdint.h rs6000/sysv4.h rs6000/eabi.h rs6000/eabialtivec.h"
+ 	extra_options="${extra_options} rs6000/sysv4.opt"
+diff --git a/gcc/config/t-wasp b/gcc/config/t-wasp
+new file mode 100644
+index 000000000..7637da073
+--- /dev/null
++++ b/gcc/config/t-wasp
+@@ -0,0 +1,2 @@
++# We don't need GCC's own include files.
++USER_H = $(EXTRA_HEADERS)
+diff --git a/gcc/config/wasp.h b/gcc/config/wasp.h
+new file mode 100644
+index 000000000..413eb8a62
+--- /dev/null
++++ b/gcc/config/wasp.h
+@@ -0,0 +1,41 @@
++#undef TARGET_WASP
++#define TARGET_WASP 1
++ 
++#undef LIB_SPEC
++#define LIB_SPEC "-lc" /* link against C standard library */
++ 
++/* Files that are linked before user code.
++   The %s tells GCC to look for these files in the library directory. */
++#undef STANDARD_STARTFILE_PREFIX
++#define STANDARD_STARTFILE_PREFIX "/usr/lib/"
++   
++#undef STARTFILE_SPEC
++#define STARTFILE_SPEC "crt0.o%s crti.o%s crtbegin.o%s"
++ 
++/* Files that are linked after user code. */
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC "crtend.o%s crtn.o%s"
++
++/*
++#undef LINK_SPEC
++#define LINK_SPEC "%{shared:-shared} %{static:-static} %{!shared: %{!static: %{rdynamic:-export-dynamic}}}"
++*/
++
++#undef ASM_SPEC
++#define ASM_SPEC "%{" FPIE1_OR_FPIC1_SPEC ":-k} %{" FPIE2_OR_FPIC2_SPEC ":-k -K}"
++
++#if defined(HAVE_LD_EH_FRAME_HDR)
++#define LINK_EH_SPEC "%{!static|static-pie:--eh-frame-hdr} "
++#endif
++ 
++/* Additional predefined macros. */
++#undef TARGET_OS_CPP_BUILTINS
++#define TARGET_OS_CPP_BUILTINS()      \
++  do {                                \
++    builtin_define ("__waspOS__");      \
++    builtin_define ("__unix__");      \
++    builtin_define ("__ANSI_COMPAT");		\
++    builtin_assert ("system=wasp");   \
++    builtin_assert ("system=unix");   \
++    builtin_assert ("system=posix");   \
++  } while(0);
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 1ff415923..654867826 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -385,6 +385,14 @@ aarch64*-*-fuchsia*)
+ 	tmake_file="${tmake_file} ${cpu_type}/t-lse t-slibgcc-libgcc"
+ 	tmake_file="${tmake_file} ${cpu_type}/t-softfp t-softfp"
+ 	;;
++aarch64*-*-wasp*)
++	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
++	extra_parts="$extra_parts crtfastmath.o"
++	tmake_file="${tmake_file} ${cpu_type}/t-aarch64"
++	tmake_file="${tmake_file} ${cpu_type}/t-lse t-slibgcc-libgcc"
++	tmake_file="${tmake_file} ${cpu_type}/t-softfp t-softfp t-crtfm"
++	md_unwind_header=aarch64/aarch64-unwind.h
++	;;
+ aarch64*-*-linux*)
+ 	extra_parts="$extra_parts crtfastmath.o"
+ 	md_unwind_header=aarch64/linux-unwind.h
+@@ -708,7 +716,7 @@ x86_64-*-elf* | x86_64-*-rtems*)
+ 	    ;;
+ 	esac
+ 	;;
+-x86_64-*-fuchsia*)
++x86_64-*-fuchsia* | x86_64-*-wasp*)
+ 	tmake_file="$tmake_file t-libgcc-pic"
+ 	;;
+ i[34567]86-*-dragonfly*)
+@@ -1178,6 +1186,10 @@ powerpc-*-elf*)
+ 	tmake_file="${tmake_file} rs6000/t-ppccomm rs6000/t-savresfgpr rs6000/t-crtstuff t-crtstuff-pic t-fdpbit"
+ 	extra_parts="$extra_parts crtbeginS.o crtendS.o crtbeginT.o ecrti.o ecrtn.o ncrti.o ncrtn.o"
+ 	;;
++powerpc64-*-wasp*)
++	tmake_file="${tmake_file} rs6000/t-ppccomm rs6000/t-savresfgpr rs6000/t-crtstuff t-crtstuff-pic t-fdpbit t-wasp"
++	extra_parts="$extra_parts crtbeginS.o crtendS.o crtbeginT.o ecrti.o ecrtn.o ncrti.o ncrtn.o"
++	;;
+ powerpc-*-eabialtivec*)
+ 	tmake_file="${tmake_file} rs6000/t-ppccomm rs6000/t-crtstuff t-crtstuff-pic t-fdpbit"
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crtbeginS.o crtendS.o crtbeginT.o ecrti.o ecrtn.o ncrti.o ncrtn.o"
+diff --git a/libstdc++-v3/crossconfig.m4 b/libstdc++-v3/crossconfig.m4
+index fe1828835..f705caa5e 100644
+--- a/libstdc++-v3/crossconfig.m4
++++ b/libstdc++-v3/crossconfig.m4
+@@ -199,7 +199,7 @@ case "${host}" in
+     AC_CHECK_FUNCS(aligned_alloc posix_memalign memalign _aligned_malloc)
+     AC_CHECK_FUNCS(_wfopen)
+     ;;
+-  *-netbsd* | *-openbsd*)
++  *-netbsd* | *-openbsd* | *-wasp*)
+     SECTION_FLAGS='-ffunction-sections -fdata-sections'
+     AC_SUBST(SECTION_FLAGS) 
+     GLIBCXX_CHECK_LINKER_FEATURES
+-- 
+2.26.2
+
+From fe790b8d306259d06f3373a318521f95f3a11a4e Mon Sep 17 00:00:00 2001
+From: Ishimoto Shinobu <nagakamira@gmail.com>
+Date: Tue, 12 May 2020 19:14:49 +0000
+Subject: [PATCH] some
+
+Signed-off-by: Ishimoto Shinobu <nagakamira@gmail.com>
+---
+ gcc/config.gcc | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 987f359cb..31f2d0238 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -877,6 +877,8 @@ case ${target} in
+       ;;
+   esac
+   default_use_cxa_atexit=yes
++  use_gcc_stdint=wrap
++  extra_options="$extra_options gnu-user.opt"
+   ;;
+ *-*-phoenix*)
+   gas=yes
+@@ -1042,7 +1044,7 @@ case ${target} in
+ esac
+ 
+ case ${target} in
+-aarch64*-*-elf | aarch64*-*-fuchsia* | aarch64*-*-rtems*)
++aarch64*-*-elf | aarch64*-*-fuchsia* | aarch64*-*-rtems* | aarch64-*-wasp*)
+ 	tm_file="${tm_file} dbxelf.h elfos.h newlib-stdint.h"
+ 	tm_file="${tm_file} aarch64/aarch64-elf.h aarch64/aarch64-errata.h aarch64/aarch64-elf-raw.h"
+ 	tmake_file="${tmake_file} aarch64/t-aarch64"
+@@ -1925,6 +1927,11 @@ x86_64-*-openbsd*)
+ 	gas=yes
+ 	gnu_ld=yes
+ 	;;
++x86_64-*-wasp*)
++	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h wasp.h"
++	gas=yes
++	gnu_ld=yes
++	;;
+ i[34567]86-*-linux* | i[34567]86-*-kfreebsd*-gnu | i[34567]86-*-gnu* | i[34567]86-*-kopensolaris*-gnu)
+ 			# Intel 80386's running GNU/*
+ 			# with ELF format using glibc 2
+-- 
+2.26.2
+

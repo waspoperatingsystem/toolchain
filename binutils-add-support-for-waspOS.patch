@@ -1,0 +1,157 @@
+From a0f1492ec83413111c47086f4bf205346eb5ed78 Mon Sep 17 00:00:00 2001
+From: Ishimoto Shinobu <nagakamira@gmail.com>
+Date: Tue, 12 May 2020 17:46:14 +0000
+Subject: [PATCH] add support for waspOS
+
+Signed-off-by: Ishimoto Shinobu <nagakamira@gmail.com>
+---
+ bfd/config.bfd    | 7 ++++++-
+ config.sub        | 2 +-
+ gas/configure.tgt | 1 +
+ ld/configure.tgt  | 7 +++++--
+ 4 files changed, 13 insertions(+), 4 deletions(-)
+
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index b96931f5..15794431 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -247,6 +247,11 @@ case "${targ}" in
+     targ_selvecs="aarch64_elf64_be_vec arm_elf32_le_vec arm_elf32_be_vec"
+     want64=true
+     ;;
++  aarch64-*-wasp*)
++    targ_defvec=aarch64_elf64_le_vec
++    targ_selvecs="aarch64_elf64_be_vec arm_elf32_le_vec arm_elf32_be_vec"
++    want64=true
++    ;;
+   aarch64-*-cloudabi*)
+     targ_defvec=aarch64_elf64_le_cloudabi_vec
+     targ_selvecs=aarch64_elf64_be_cloudabi_vec
+@@ -683,7 +688,7 @@ case "${targ}" in
+     targ_selvecs="i386_elf32_fbsd_vec iamcu_elf32_vec i386_coff_vec i386_pei_vec x86_64_pei_vec i386_elf32_vec x86_64_elf64_vec l1om_elf64_vec l1om_elf64_fbsd_vec k1om_elf64_vec k1om_elf64_fbsd_vec"
+     want64=true
+     ;;
+-  x86_64-*-netbsd* | x86_64-*-openbsd*)
++  x86_64-*-netbsd* | x86_64-*-openbsd* | x86_64-*-wasp*)
+     targ_defvec=x86_64_elf64_vec
+     targ_selvecs="i386_elf32_vec iamcu_elf32_vec i386_coff_vec i386_pei_vec x86_64_pei_vec l1om_elf64_vec k1om_elf64_vec"
+     want64=true
+diff --git a/config.sub b/config.sub
+index f02d43ad..850203a7 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1347,7 +1347,7 @@ case $os in
+ 	     | nindy* | vxsim* | vxworks* | ebmon* | hms* | mvs* \
+ 	     | clix* | riscos* | uniplus* | iris* | isc* | rtu* | xenix* \
+ 	     | knetbsd* | mirbsd* | netbsd* \
+-	     | bitrig* | openbsd* | solidbsd* | libertybsd* | os108* \
++	     | bitrig* | openbsd* | wasp* | solidbsd* | libertybsd* | os108* \
+ 	     | ekkobsd* | kfreebsd* | freebsd* | riscix* | lynxos* \
+ 	     | bosx* | nextstep* | cxux* | aout* | elf* | oabi* \
+ 	     | ptx* | coff* | ecoff* | winnt* | domain* | vsta* \
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index 37224c51..ac965b4b 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -229,6 +229,7 @@ case ${generic_target} in
+   i386-*-knetbsd*-gnu | \
+   i386-*-netbsd* | \
+   i386-*-openbsd*)			fmt=elf em=nbsd ;;
++  i386-*-wasp*)			fmt=elf ;;
+   i386-*-linux-*)			fmt=elf em=linux
+     case ${cpu}-${os} in
+       x86_64*-linux-gnux32)		arch=x86_64:32 ;;
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index 23194e35..2251d340 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -59,6 +59,9 @@ aarch64-*-freebsd*)	targ_emul=aarch64fbsd
+ aarch64-*-fuchsia*)	targ_emul=aarch64elf
+ 			targ_extra_emuls="aarch64elfb armelf armelfb"
+ 			;;
++aarch64-*-wasp*)	targ_emul=aarch64elf
++			targ_extra_emuls="aarch64elfb armelf armelfb"
++			;;
+ aarch64_be-*-linux-gnu_ilp32)
+ 			targ_emul=aarch64linux32b
+ 			targ_extra_libpath="aarch64linuxb aarch64linux aarch64linux32 armelfb_linux_eabi armelf_linux_eabi"
+@@ -651,7 +654,7 @@ powerpc-*-vxworks*)
+ 			targ_extra_emuls="elf32ppc elf32ppclinux elf32ppcsim"
+ 			;;
+ powerpc*-*-elf* | powerpc*-*-eabi* | powerpc*-*-sysv* \
+-  | powerpc*-*-linux* | powerpc*-*-netbsd* | powerpc*-*-openbsd* \
++  | powerpc*-*-linux* | powerpc*-*-netbsd* | powerpc*-*-openbsd* | powerpc*-*-wasp* \
+   | powerpc*-*-rtems* \
+   | powerpc*-*-solaris* | powerpc*-*-kaos* | powerpc*-*-vxworks*)
+ 			case "${targ}" in
+@@ -964,7 +967,7 @@ x86_64-*-netbsd*)	targ_emul=elf_x86_64
+ 					sed -e 's/netbsd/netbsdelf/'`;;
+ 			esac
+ 			;;
+-x86_64-*-elf* | x86_64-*-rtems* | x86_64-*-fuchsia*)
++x86_64-*-elf* | x86_64-*-rtems* | x86_64-*-fuchsia* | x86_64-*-wasp*)
+ 			targ_emul=elf_x86_64
+ 			targ_extra_emuls="elf_i386 elf_iamcu elf32_x86_64 elf_l1om elf_k1om"
+ 			targ_extra_libpath="elf_i386 elf_iamcu elf32_x86_64 elf_l1om elf_k1om"
+-- 
+2.26.2
+
+From 33a9a6e303d9d056ff684fea1539a5e817a747bd Mon Sep 17 00:00:00 2001
+From: Ishimoto Shinobu <nagakamira@gmail.com>
+Date: Tue, 12 May 2020 18:00:09 +0000
+Subject: [PATCH] add powerpc64-unknown-wasp for bfd
+
+Signed-off-by: Ishimoto Shinobu <nagakamira@gmail.com>
+---
+ bfd/config.bfd | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index 15794431..55cccf23 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -1106,7 +1106,7 @@ case "${targ}" in
+     want64=true
+     ;;
+   powerpc64-*-elf* | powerpc-*-elf64* | powerpc64-*-linux* | \
+-  powerpc64-*-*bsd*)
++  powerpc64-*-*bsd* | powerpc64-*-wasp*)
+     targ_defvec=powerpc_elf64_vec
+     targ_selvecs="powerpc_elf64_le_vec powerpc_elf32_vec powerpc_elf32_le_vec rs6000_xcoff_vec rs6000_xcoff64_vec rs6000_xcoff64_aix_vec"
+     want64=true
+-- 
+2.26.2
+
+From b3bc0780eee8ef448fb66f1f07c83ae67515b0a8 Mon Sep 17 00:00:00 2001
+From: Ishimoto Shinobu <nagakamira@gmail.com>
+Date: Tue, 12 May 2020 18:04:36 +0000
+Subject: [PATCH] add powepc64le-unknown-wasp for gas
+
+Signed-off-by: Ishimoto Shinobu <nagakamira@gmail.com>
+---
+ gas/configure.tgt | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index ac965b4b..a181c743 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -123,6 +123,7 @@ generic_target=${cpu_type}-$vendor-$os
+ case ${generic_target} in
+   aarch64*-*-elf*)			fmt=elf;;
+   aarch64*-*-fuchsia*)			fmt=elf;;
++  aarch64*-*-wasp*)			fmt=elf;;
+   aarch64*-*-linux*)			fmt=elf em=linux
+     case ${cpu}-${os} in
+       aarch64*-linux-gnu_ilp32)		arch=aarch64:32 ;;
+@@ -354,6 +355,7 @@ case ${generic_target} in
+   ppc-*-aix*)				fmt=coff em=aix ;;
+   ppc-*-beos*)				fmt=coff ;;
+   ppc-*-*n*bsd* | ppc-*-elf*)		fmt=elf ;;
++  ppc-*-wasp*)				fmt=elf ;;
+   ppc-*-eabi* | ppc-*-sysv4*)		fmt=elf ;;
+   ppc-*-linux-*)			fmt=elf em=linux ;;
+   ppc-*-solaris*)			fmt=elf em=solaris ;;
+-- 
+2.26.2
+
